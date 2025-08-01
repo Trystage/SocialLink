@@ -1,0 +1,7 @@
+name: SocialLink
+version: '${project.version}'
+main: win.trystage.sociallink.SocialLink
+commands:
+  linkaccount:
+    description: 绑定你的外部账号
+    usage: /linkaccount <qq/bilibili/douyin/hypixel> <账号名>
