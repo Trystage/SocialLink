@@ -25,7 +25,7 @@ public class MysqlDatabase implements Database {
     @Override
     public void connect() {
         try {
-            String url = "jdbc:mysql://" + host + ":" + port + "/" + database + "?useSSL=false";
+            String url = "jdbc:mysql://" + host + ":" + port + "/" + database + "?useSSL=false&autoReconnect=true";
             connection = DriverManager.getConnection(url, username, password);
         } catch (SQLException e) {
             e.printStackTrace();
@@ -45,6 +45,12 @@ public class MysqlDatabase implements Database {
 
     @Override
     public void createTableIfNotExists() {
+        try {
+            ensureConnection();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return;
+        }
         String sql = "CREATE TABLE IF NOT EXISTS player_accounts (" +
                 "uuid VARCHAR(36) PRIMARY KEY, " +
                 "username VARCHAR(16), " +
@@ -63,6 +69,12 @@ public class MysqlDatabase implements Database {
 
     @Override
     public void savePlayerData(PlayerData playerData) {
+        try {
+            ensureConnection();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return;
+        }
         String sql = "INSERT INTO player_accounts (uuid, username, qq, bilibili, douyin, hypixel) " +
                 "VALUES (?, ?, ?, ?, ?, ?) " +
                 "ON DUPLICATE KEY UPDATE " +
@@ -87,6 +99,12 @@ public class MysqlDatabase implements Database {
 
     @Override
     public PlayerData getPlayerData(UUID uuid) {
+        try {
+            ensureConnection();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return null;
+        }
         String sql = "SELECT * FROM player_accounts WHERE uuid = ?";
 
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
@@ -111,6 +129,12 @@ public class MysqlDatabase implements Database {
 
     @Override
     public PlayerData getPlayerData(String username) {
+        try {
+            ensureConnection();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return null;
+        }
         String sql = "SELECT * FROM player_accounts WHERE username = ?";
 
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
@@ -135,6 +159,12 @@ public class MysqlDatabase implements Database {
 
     @Override
     public void updateAccount(UUID uuid, String accountType, String accountId) {
+        try {
+            ensureConnection();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return;
+        }
         String sql = "UPDATE player_accounts SET " + accountType + " = ? WHERE uuid = ?";
 
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
@@ -143,6 +173,35 @@ public class MysqlDatabase implements Database {
             stmt.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();
+        }
+    }
+
+    /**
+     * 检查当前连接是否有效
+     */
+    private boolean isConnectionValid() {
+        try {
+            if (connection == null || connection.isClosed()) return false;
+            // 执行一个轻量级查询测试连接
+            try (Statement stmt = connection.createStatement()) {
+                stmt.executeQuery("SELECT 1");
+            }
+            return true;
+        } catch (SQLException e) {
+            return false;
+        }
+    }
+
+    /**
+     * 确保连接有效，若无效则重新建立
+     */
+    private void ensureConnection() throws SQLException {
+        if (!isConnectionValid()) {
+            if (connection != null) {
+                try { connection.close(); } catch (SQLException ignored) {}
+            }
+            String url = "jdbc:mysql://" + host + ":" + port + "/" + database + "?useSSL=false&autoReconnect=true";
+            connection = DriverManager.getConnection(url, username, password);
         }
     }
 }
