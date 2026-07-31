@@ -183,9 +183,7 @@ public class MysqlDatabase implements Database {
         try {
             if (connection == null || connection.isClosed()) return false;
             // 执行一个轻量级查询测试连接
-            try (Statement stmt = connection.createStatement()) {
-                stmt.executeQuery("SELECT 1");
-            }
+            connection.isValid(2);
             return true;
         } catch (SQLException e) {
             return false;
